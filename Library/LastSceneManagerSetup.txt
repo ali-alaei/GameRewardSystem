@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/rewrd.unity
+  isLoaded: 1
+  isActive: 1
