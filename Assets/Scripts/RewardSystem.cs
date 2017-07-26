@@ -40,7 +40,7 @@ public class RewardSystem : MonoBehaviour
             }
         }
     }
- 
+
     enum ProgressStates
     {
         Progressable,
@@ -56,6 +56,27 @@ public class RewardSystem : MonoBehaviour
 
     }
 
+    private int remainigTime;
+
+    public int RemainigTime
+    {
+        get
+        {
+            return remainigTime;
+        }
+
+        set
+        {
+            remainigTime = value;
+        }
+    }
+
+    [SerializeField]
+    private int user_id;
+
+
+    [SerializeField]
+    private List<Prize> userPrizes;
 
     [SerializeField]
     private TimeType timeKind;
@@ -63,35 +84,17 @@ public class RewardSystem : MonoBehaviour
     [SerializeField]
     private Time favouriteTimes;
 
-    [SerializeField]
-    private List<Prize> userPrizes;
-
-
-    [SerializeField]
-    private int user_id;
-
-
-
-
-    [SerializeField]
-    [Range(0, 59)]
-    private int favourite_Minute_Difference;
-    [SerializeField]
-    [Range(0, 23)]
-    private int favourite_Hour_Difference;
-
-
-
     private string sid;
     private long lastRewardedTime;
     private int userProgress;
 
+    public System.Action<int> GiveRewardAction;
+
     void Start()
+
     {
-        //PlayerPrefs.DeleteAll();
         LoadFromDB();
-        GetReward();
-        //GetProgress(user_id);
+        GetReward();  
     }
 
     private void LoadFromDB()
@@ -125,89 +128,87 @@ public class RewardSystem : MonoBehaviour
         {
             return false;
         }
-
-
     }
 
     private ProgressStates GetProgressState()
     {
-        //____checking with days____//
-
+       
         print("rewarded time format : " + lastRewardedTime);
         TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);
         TimeSpan timeOfNow = new TimeSpan(DateTime.Now.Ticks);
-
-        print("last: " + lastRewarded.Minutes);
-
-        print("now:" + timeOfNow.Minutes);
-
-
-        double minutesDifference = timeOfNow.Minutes - lastRewarded.Minutes;
-        double hrsDiff = timeOfNow.Hours - lastRewarded.Hours;
-        double totalMin = timeOfNow.TotalMinutes - lastRewarded.TotalMinutes;
-        double totalHrs = timeOfNow.TotalHours - lastRewarded.TotalHours;
-        //____checking with minutes____//
-
+        print("last: " + lastRewarded.Hours);
+        print("now:" + timeOfNow.Hours);
+        double totalMin = timeOfNow.Minutes - lastRewarded.Minutes;
+        double totalHrs = timeOfNow.Hours - lastRewarded.Hours;
+        double totalDays = timeOfNow.Days - lastRewarded.Days;
+       
         switch (timeKind)
         {
-            case TimeType.hour:
-
-                if (totalHrs<=favourite_Hour_Difference)
+            
+            case TimeType.day:
+                if (totalDays == 1)    //means player came to game regularly.
                 {
-                    if (hrsDiff == favourite_Hour_Difference)
-                    {
-                        return ProgressStates.Progressable;
-
-                    }
-                    else
-                    {
-                        return ProgressStates.NoProgress;
-
-                    }
+                    return ProgressStates.Progressable;
                 }
-                else
+                else if(totalDays > 1)  //means it's more than one they that player didn't come in game.
                 {
                     return ProgressStates.ResetProgress;
 
                 }
-                break;
-            case TimeType.min:
-                if (minutesDifference == favourite_Minute_Difference)
+                else   // means layer came to game again in one day.
                 {
+                    return ProgressStates.NoProgress;
+                }
+                
 
-                    if (totalMin <=  59)
-                    {
-                        return ProgressStates.Progressable;
-                    }
+            case TimeType.hour:
+                if (totalHrs == 1)
+                {
+                    return ProgressStates.Progressable;
 
                 }
-                break;
-           
+                else if(totalHrs > 1)
+                {
+
+                    return ProgressStates.ResetProgress;
+
+                }
+                else
+                {
+                    return ProgressStates.NoProgress;
+
+                }
+
+               
+
+            case TimeType.min:
+
+                if (totalMin == 1)
+                {
+                    return ProgressStates.Progressable;
+                }
+
+                else if(totalMin > 1)
+                {
+                    print("totalmin>1 : progress must be reset now");
+                    return ProgressStates.ResetProgress;
+
+                }
+                else
+                {
+                    return ProgressStates.NoProgress;
+                       
+                }
+               
+            default:
+                return ProgressStates.NoProgress;
+                          
         }
-
-
-
-
-        if (minutesDifference > favourite_Minute_Difference)
-        {
-            return ProgressStates.ResetProgress;
-        }
-        else
-        {
-            return ProgressStates.NoProgress;
-        }
-
     }
 
-
-
-
-
+    
     public void GetReward()
     {
-
-
-
         ProgressStates state = GetProgressState();
 
         switch (state)
@@ -229,26 +230,22 @@ public class RewardSystem : MonoBehaviour
         SaveToDB();
     }
 
-
-
     private void GiveReward()
     {
+
         print(userPrizes[userProgress - 1].Coin + " coins were awarded to user with user id = " + user_id);
         print(userPrizes[userProgress - 1].Gem + " gems were awarded to user with user id = " + user_id);
-
+        print("user progress = " + userProgress);
         lastRewardedTime = DateTime.Now.Ticks;
-
+        if (GiveRewardAction!=null)
+        {
+            GiveRewardAction(userProgress);
+        }
     }
 
     private void SaveToDB()
     {
         PlayerPrefs.SetInt("Progress:" + user_id, userProgress);
-
         PlayerPrefs.SetString("LastRewarded:" + user_id, lastRewardedTime.ToString());
     }
-
-
-
-
-
 }
