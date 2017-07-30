@@ -41,6 +41,15 @@ public class RewardSystem : MonoBehaviour
         }
     }
 
+    static class TimeConstants
+    {
+        public const int basedHour = 23;
+        public const int basedMinutes = 60;
+        public const int basedSeconds = 60;
+    }
+
+    
+
     enum ProgressStates
     {
         Progressable,
@@ -56,20 +65,22 @@ public class RewardSystem : MonoBehaviour
 
     }
 
-    private int remainigTime;
-
-    public int RemainigTime
+    private int remainingTime;
+    public int RemainingTime
     {
         get
         {
-            return remainigTime;
+            return remainingTime;
         }
 
         set
         {
-            remainigTime = value;
+            remainingTime = value;
         }
     }
+    public TimeSpan remainedTime;
+
+    
 
     [SerializeField]
     private int user_id;
@@ -88,13 +99,17 @@ public class RewardSystem : MonoBehaviour
     private long lastRewardedTime;
     private int userProgress;
 
-    public System.Action<int> GiveRewardAction;
+    public System.Action<int,TimeSpan> GiveRewardAction;
+
+    
 
     void Start()
 
     {
+
+        //TimeSpan temp = new tim
         LoadFromDB();
-        GetReward();  
+        GetReward();
     }
 
     private void LoadFromDB()
@@ -132,7 +147,9 @@ public class RewardSystem : MonoBehaviour
 
     private ProgressStates GetProgressState()
     {
-       
+        int remainingHours = 0;
+        int remainingMinutes = 0;
+        int remainingSeconds = 0;
         print("rewarded time format : " + lastRewardedTime);
         TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);
         TimeSpan timeOfNow = new TimeSpan(DateTime.Now.Ticks);
@@ -146,64 +163,95 @@ public class RewardSystem : MonoBehaviour
         {
             
             case TimeType.day:
+                
+                remainingHours = TimeConstants.basedHour - timeOfNow.Hours;
+                remainingMinutes = TimeConstants.basedMinutes - timeOfNow.Minutes;
+                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
+                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                print("now : " + timeOfNow);
+                print("day_remained time" + remainedTime);
                 if (totalDays == 1)    //means player came to game regularly.
                 {
+                    
                     return ProgressStates.Progressable;
                 }
                 else if(totalDays > 1)  //means it's more than one they that player didn't come in game.
                 {
+                  
                     return ProgressStates.ResetProgress;
 
                 }
                 else   // means layer came to game again in one day.
                 {
+                   
                     return ProgressStates.NoProgress;
                 }
                 
 
             case TimeType.hour:
+                
+                remainingMinutes = TimeConstants.basedMinutes - timeOfNow.Minutes;
+                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
+                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                print("now : " + timeOfNow);
+                print("hour_remained time" + remainedTime);
                 if (totalHrs == 1)
                 {
+                    
                     return ProgressStates.Progressable;
 
                 }
                 else if(totalHrs > 1)
                 {
-
+                    
                     return ProgressStates.ResetProgress;
 
                 }
                 else
                 {
+                    
                     return ProgressStates.NoProgress;
 
                 }
-
+                
                
 
             case TimeType.min:
 
+                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
+                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                print("now : " + timeOfNow);
+                print("minute_remained time" + remainedTime);
                 if (totalMin == 1)
                 {
+                    
                     return ProgressStates.Progressable;
                 }
 
                 else if(totalMin > 1)
                 {
+                    
                     print("totalmin>1 : progress must be reset now");
                     return ProgressStates.ResetProgress;
 
                 }
                 else
                 {
+                    
                     return ProgressStates.NoProgress;
                        
                 }
                
             default:
+                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                print("now : " + timeOfNow);
+                print("other_remained time" + remainedTime);
                 return ProgressStates.NoProgress;
+              
                           
         }
+
+        
     }
 
     
@@ -239,7 +287,7 @@ public class RewardSystem : MonoBehaviour
         lastRewardedTime = DateTime.Now.Ticks;
         if (GiveRewardAction!=null)
         {
-            GiveRewardAction(userProgress);
+            GiveRewardAction(userProgress,remainedTime);
         }
     }
 
