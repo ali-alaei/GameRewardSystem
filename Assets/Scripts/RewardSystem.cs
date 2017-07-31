@@ -43,8 +43,9 @@ public class RewardSystem : MonoBehaviour
 
     static class TimeConstants
     {
-        public const int basedHour = 23;
-        public const int basedMinutes = 60;
+        public const int basedRewardHour = 23;
+        public const int basedResetHour = 47;
+        public const int basedMinutes = 59;
         public const int basedSeconds = 60;
     }
 
@@ -65,22 +66,36 @@ public class RewardSystem : MonoBehaviour
 
     }
 
-    private int remainingTime;
-    public int RemainingTime
+
+    private TimeSpan remainedTime;
+    public TimeSpan RemainedTime
     {
         get
         {
-            return remainingTime;
+            return remainedTime;
         }
 
         set
         {
-            remainingTime = value;
+            remainedTime = value;
         }
     }
-    public TimeSpan remainedTime;
 
-    
+   
+
+    private TimeSpan resetTime;
+    public TimeSpan ResetTime
+    {
+        get
+        {
+            return resetTime;
+        }
+
+        set
+        {
+            resetTime = value;
+        }
+    }
 
     [SerializeField]
     private int user_id;
@@ -99,15 +114,20 @@ public class RewardSystem : MonoBehaviour
     private long lastRewardedTime;
     private int userProgress;
 
-    public System.Action<int,TimeSpan> GiveRewardAction;
+    public System.Action<int,TimeSpan,TimeSpan> GiveRewardAction;
 
     
+
+
 
     void Start()
 
     {
+        //TimeSpan temp_1 = new TimeSpan(11, 00, 00);
+        //TimeSpan temp_2 = new TimeSpan(13, 60, 60);
+        //string diff = (temp_2 - temp_1).ToString();
+        //print("diff : " + diff);
 
-        //TimeSpan temp = new tim
         LoadFromDB();
         GetReward();
     }
@@ -147,7 +167,8 @@ public class RewardSystem : MonoBehaviour
 
     private ProgressStates GetProgressState()
     {
-        int remainingHours = 0;
+        int remainingRewardHours = 0;
+        int remainingResetHours = 0;
         int remainingMinutes = 0;
         int remainingSeconds = 0;
         print("rewarded time format : " + lastRewardedTime);
@@ -163,13 +184,16 @@ public class RewardSystem : MonoBehaviour
         {
             
             case TimeType.day:
-                
-                remainingHours = TimeConstants.basedHour - timeOfNow.Hours;
+
+                remainingRewardHours = TimeConstants.basedRewardHour - timeOfNow.Hours;
+                remainingResetHours = TimeConstants.basedResetHour - timeOfNow.Hours;
                 remainingMinutes = TimeConstants.basedMinutes - timeOfNow.Minutes;
                 remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
-                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
+                ResetTime = new TimeSpan(remainingResetHours, remainingMinutes, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("day_remained time" + remainedTime);
+                print("day_remained reward time : " + remainedTime);
+                print("day_remained reset time : " + resetTime);
                 if (totalDays == 1)    //means player came to game regularly.
                 {
                     
@@ -189,12 +213,13 @@ public class RewardSystem : MonoBehaviour
                 
 
             case TimeType.hour:
-                
                 remainingMinutes = TimeConstants.basedMinutes - timeOfNow.Minutes;
                 remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
-                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
+                ResetTime = new TimeSpan(1, remainingMinutes, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("hour_remained time" + remainedTime);
+                print("hour_remained time" + RemainedTime);
+                print("hour_reset time" + ResetTime);
                 if (totalHrs == 1)
                 {
                     
@@ -218,10 +243,12 @@ public class RewardSystem : MonoBehaviour
 
             case TimeType.min:
 
-                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
-                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;               
+                RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
+                ResetTime = new TimeSpan(remainingRewardHours, 1, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("minute_remained time" + remainedTime);
+                print("minute_remained time" + RemainedTime);        
+                print("day_remained reset time : " + resetTime);  
                 if (totalMin == 1)
                 {
                     
@@ -243,9 +270,9 @@ public class RewardSystem : MonoBehaviour
                 }
                
             default:
-                remainedTime = new TimeSpan(remainingHours, remainingMinutes, remainingSeconds);
+                RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("other_remained time" + remainedTime);
+                print("other_remained time" + RemainedTime);
                 return ProgressStates.NoProgress;
               
                           
@@ -287,7 +314,7 @@ public class RewardSystem : MonoBehaviour
         lastRewardedTime = DateTime.Now.Ticks;
         if (GiveRewardAction!=null)
         {
-            GiveRewardAction(userProgress,remainedTime);
+            GiveRewardAction(userProgress,RemainedTime,ResetTime);
         }
     }
 
