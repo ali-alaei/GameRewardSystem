@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using UnityEngine.Networking;
 
 
 public class RewardSystem : MonoBehaviour
@@ -49,7 +50,7 @@ public class RewardSystem : MonoBehaviour
         public const int basedSeconds = 60;
     }
 
-    
+
 
     enum ProgressStates
     {
@@ -81,7 +82,7 @@ public class RewardSystem : MonoBehaviour
         }
     }
 
-   
+
 
     private TimeSpan resetTime;
     public TimeSpan ResetTime
@@ -109,24 +110,30 @@ public class RewardSystem : MonoBehaviour
 
     [SerializeField]
     private Time favouriteTimes;
-
     private string sid;
     private long lastRewardedTime;
     private int userProgress;
+    private TimeSpan timeOfNow;
+    private string result;
 
-    public System.Action<int,TimeSpan,TimeSpan> GiveRewardAction;
-
-    
-
-
+    public System.Action<int, TimeSpan, TimeSpan> GiveRewardAction;
 
     void Start()
 
     {
-        //TimeSpan temp_1 = new TimeSpan(11, 00, 00);
-        //TimeSpan temp_2 = new TimeSpan(13, 60, 60);
-        //string diff = (temp_2 - temp_1).ToString();
-        //print("diff : " + diff);
+       //PlayerPrefs.DeleteAll();
+        //TimeSpan timeOfNow = new TimeSpan(DateTime.Now.Ticks);
+        //print("system time : " + timeOfNow.TotalMinutes);
+        StartCoroutine(GetTime(GetTimeCallBack));
+       
+    }
+
+    void GetTimeCallBack(TimeSpan result)
+    {
+        
+        timeOfNow = result;
+        print("get time callback" + timeOfNow);
+        // print("::::" + timeOfNow.TotalMinutes);
 
         LoadFromDB();
         GetReward();
@@ -138,20 +145,22 @@ public class RewardSystem : MonoBehaviour
 
         if (CheckPlayerExistence())
         {
-
+            print("player existed");
             lastRewardedTime = long.Parse(PlayerPrefs.GetString("LastRewarded:" + sid));
+            TimeSpan tmp = new TimeSpan(lastRewardedTime);
+            print("last rewarded time from playerpref : " + tmp);
             userProgress = PlayerPrefs.GetInt("Progress:" + user_id);
         }
         else
         {
-            DateTime time1 = new DateTime(2010, 7, 17, 14, 30, 05);
-            lastRewardedTime = time1.Ticks;
+            print("player didn't exist");
+            DateTime initialTime = new DateTime(2010, 7, 17, 14, 30, 05);
+            lastRewardedTime = initialTime.Ticks;
             userProgress = 0;
             SaveToDB();
         }
 
     }
-
 
     private bool CheckPlayerExistence()
     {
@@ -171,20 +180,18 @@ public class RewardSystem : MonoBehaviour
         int remainingResetHours = 0;
         int remainingMinutes = 0;
         int remainingSeconds = 0;
-        print("rewarded time format : " + lastRewardedTime);
-        TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);
-        TimeSpan timeOfNow = new TimeSpan(DateTime.Now.Ticks);
-        print("last: " + lastRewarded.Hours);
-        print("now:" + timeOfNow.Hours);
+       // print("rewarded time format : " + lastRewardedTime);
+        TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);       
+        print("last: " + lastRewarded);
+        print("now:" + timeOfNow);
         double totalMin = timeOfNow.Minutes - lastRewarded.Minutes;
         double totalHrs = timeOfNow.Hours - lastRewarded.Hours;
         double totalDays = timeOfNow.Days - lastRewarded.Days;
-       
+
         switch (timeKind)
         {
-            
-            case TimeType.day:
 
+            case TimeType.day:
                 remainingRewardHours = TimeConstants.basedRewardHour - timeOfNow.Hours;
                 remainingResetHours = TimeConstants.basedResetHour - timeOfNow.Hours;
                 remainingMinutes = TimeConstants.basedMinutes - timeOfNow.Minutes;
@@ -192,25 +199,25 @@ public class RewardSystem : MonoBehaviour
                 RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 ResetTime = new TimeSpan(remainingResetHours, remainingMinutes, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("day_remained reward time : " + remainedTime);
+                print("day_remained reward time : " + remainedTime.TotalMinutes);
                 print("day_remained reset time : " + resetTime);
                 if (totalDays == 1)    //means player came to game regularly.
                 {
-                    
+
                     return ProgressStates.Progressable;
                 }
-                else if(totalDays > 1)  //means it's more than one they that player didn't come in game.
+                else if (totalDays > 1)  //means it's more than one they that player didn't come in game.
                 {
-                  
+
                     return ProgressStates.ResetProgress;
 
                 }
                 else   // means layer came to game again in one day.
                 {
-                   
+
                     return ProgressStates.NoProgress;
                 }
-                
+
 
             case TimeType.hour:
                 remainingMinutes = TimeConstants.basedMinutes - timeOfNow.Minutes;
@@ -222,66 +229,62 @@ public class RewardSystem : MonoBehaviour
                 print("hour_reset time" + ResetTime);
                 if (totalHrs == 1)
                 {
-                    
+
                     return ProgressStates.Progressable;
 
                 }
-                else if(totalHrs > 1)
+                else if (totalHrs > 1)
                 {
-                    
+
                     return ProgressStates.ResetProgress;
 
                 }
                 else
                 {
-                    
+
                     return ProgressStates.NoProgress;
 
                 }
-                
-               
+
+
 
             case TimeType.min:
-
-                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;               
+                remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
                 RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 ResetTime = new TimeSpan(remainingRewardHours, 1, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("minute_remained time" + RemainedTime);        
-                print("day_remained reset time : " + resetTime);  
+                print("minute_remained time" + RemainedTime);
+                print("day_remained reset time : " + resetTime);
                 if (totalMin == 1)
                 {
-                    
+
                     return ProgressStates.Progressable;
                 }
 
-                else if(totalMin > 1)
+                else if (totalMin > 1)
                 {
-                    
+
                     print("totalmin>1 : progress must be reset now");
                     return ProgressStates.ResetProgress;
 
                 }
                 else
                 {
-                    
+
                     return ProgressStates.NoProgress;
-                       
+
                 }
-               
+
             default:
                 RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 print("now : " + timeOfNow);
                 print("other_remained time" + RemainedTime);
                 return ProgressStates.NoProgress;
-              
-                          
-        }
 
-        
+
+        }
     }
 
-    
     public void GetReward()
     {
         ProgressStates state = GetProgressState();
@@ -307,14 +310,15 @@ public class RewardSystem : MonoBehaviour
 
     private void GiveReward()
     {
-
+        print("Get Prized...");
         print(userPrizes[userProgress - 1].Coin + " coins were awarded to user with user id = " + user_id);
         print(userPrizes[userProgress - 1].Gem + " gems were awarded to user with user id = " + user_id);
         print("user progress = " + userProgress);
-        lastRewardedTime = DateTime.Now.Ticks;
-        if (GiveRewardAction!=null)
+        lastRewardedTime = timeOfNow.Ticks; //time of now must be taken from servers not system.
+        print("lastRewardedTime updated : " + lastRewardedTime);
+        if (GiveRewardAction != null)
         {
-            GiveRewardAction(userProgress,RemainedTime,ResetTime);
+            GiveRewardAction(userProgress, RemainedTime, ResetTime);
         }
     }
 
@@ -323,4 +327,165 @@ public class RewardSystem : MonoBehaviour
         PlayerPrefs.SetInt("Progress:" + user_id, userProgress);
         PlayerPrefs.SetString("LastRewarded:" + user_id, lastRewardedTime.ToString());
     }
+    
+    IEnumerator GetGoogleTime()
+    {
+        UnityWebRequest req;
+        req = UnityWebRequest.Get("http://google.com");
+        Dictionary<string, string> date;
+        result = string.Empty;
+        yield return req.Send();
+        if (!req.isError)
+        {
+            date = req.GetResponseHeaders();
+            if (date.ContainsKey("Date"))
+            {
+                result = date["Date"];
+                Debug.Log("Google Time Successfull");
+            }
+        }
+       
+        yield return result;
+    }
+
+    IEnumerator GetCurrentmillisTime()
+    {
+        UnityWebRequest req;
+        req = UnityWebRequest.Get("http://currentmillis.com/time/minutes-since-unix-epoch.php");
+        result = string.Empty;
+        yield return req.Send();
+        if (!req.isError)
+        {
+            result = req.downloadHandler.text;
+            Debug.Log("Currentmillis Successfull");
+
+        }
+        yield return result;
+    }
+
+    IEnumerator GetTime(System.Action<TimeSpan> resultAction)
+    {
+        TimeSpan timeOfNow;
+        yield return GetGoogleTime();
+        if (result != string.Empty)
+        {
+         
+            DateTime time = Convert.ToDateTime(result);
+         
+            timeOfNow = new TimeSpan(time.Ticks);
+
+        }
+        else
+        {
+            yield return GetCurrentmillisTime();
+
+            if (result != string.Empty)
+            {
+                DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                epoch = epoch.AddMinutes(Double.Parse(result));
+                timeOfNow = new TimeSpan(epoch.Ticks);
+            }
+            else
+            {
+                timeOfNow = new TimeSpan(System.DateTime.Now.Ticks);
+            }
+
+        }
+        if (resultAction!=null)
+                resultAction(timeOfNow);
+
+
+        //UnityWebRequest req;
+        //req = UnityWebRequest.Get("http://google.com");
+        //Dictionary<string, string> date;
+
+        //yield return req.Send();
+        //if (req.isError)
+        //{
+        //    Debug.Log(req.error);
+        //    req = UnityWebRequest.Get("http://currentmillis.com/time/minutes-since-unix-epoch.php");
+        //    yield return req.Send();
+        //    if (req.isError)
+        //    {
+        //        Debug.Log(req.error);
+        //        timeOfNow = new TimeSpan(DateTime.Now.Ticks);
+        //    }
+        //    else
+        //    {
+        //        date = req.GetResponseHeaders();
+        //        string tmp = date["Date"];
+        //        DateTime time = Convert.ToDateTime(tmp);
+        //        timeOfNow = new TimeSpan(time.Ticks);
+        //        print("currentMilis time : " + timeOfNow.Hours);
+
+        //    }
+        //}
+
+        //else
+        //{
+        //    date = req.GetResponseHeaders();
+        //    string tmp = null;          
+        //    if (date.ContainsKey("Date"))
+        //    {
+        //        tmp = date["Date"];
+        //    }
+        //    else
+        //    {
+
+        //    }
+        //    DateTime time = Convert.ToDateTime(tmp);
+        //    timeOfNow = new TimeSpan(time.Ticks);
+        //    print("google time : " + timeOfNow.Hours);
+        //}
+
+
+
+        /*if (!req.isError)
+        {
+           
+        }
+        else
+        {
+            req = UnityWebRequest.Get("http://currentmillis.com/time/minutes-since-unix-epoch.php");
+            yield return req.Send();
+            if (!req.isError)
+            {
+
+            }
+            else
+            {
+
+            }
+        }
+
+        UnityWebRequest www = UnityWebRequest.Get("http://currentmillis.com/time/minutes-since-unix-epoch.php");
+        UnityWebRequest www2 = UnityWebRequest.Get("http://google.com");
+
+        yield return www.Send();
+        yield return www2.Send();
+
+        if (www.isError)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            // Show results as text
+
+            string EpochMin = www.downloadHandler.text;
+            DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            epoch = epoch.AddMinutes(Double.Parse(EpochMin));
+            print(epoch);
+
+            Dictionary<String, string> test = www2.GetResponseHeaders();
+            Debug.Log(test["Date"]);
+            // Or retrieve results as binary data
+            byte[] results = www.downloadHandler.data;
+        }*/
+
+
+    }
 }
+
+
+
