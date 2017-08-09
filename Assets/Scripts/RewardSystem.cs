@@ -121,18 +121,29 @@ public class RewardSystem : MonoBehaviour
     void Start()
 
     {
-       //PlayerPrefs.DeleteAll();
+        //PlayerPrefs.DeleteAll();
         //TimeSpan timeOfNow = new TimeSpan(DateTime.Now.Ticks);
         //print("system time : " + timeOfNow.TotalMinutes);
         StartCoroutine(GetTime(GetTimeCallBack));
-       
+        
+        //TimeSpan tmp_2 = new TimeSpan(11, 00, 00);
+        //int diff = (int)tmp_2.TotalHours - (int)tmp_1.TotalHours;
+        //double diff_1 = tmp_2.TotalHours - tmp_1.TotalHours;
+        //print(tmp_2.TotalHours);
+        //print(tmp_1.TotalHours);
+        //print((int)tmp_2.TotalHours);
+        //print((int)tmp_1.TotalHours);
+
+        //print("int hrs diff : " + diff);
+        //print("double hrs diff : " + diff_1);
+        
     }
 
     void GetTimeCallBack(TimeSpan result)
     {
-        
+
         timeOfNow = result;
-        print("get time callback" + timeOfNow);
+        //print("get time callback" + timeOfNow);
         // print("::::" + timeOfNow.TotalMinutes);
 
         LoadFromDB();
@@ -145,7 +156,7 @@ public class RewardSystem : MonoBehaviour
 
         if (CheckPlayerExistence())
         {
-            print("player existed");
+            //print("player existed");
             lastRewardedTime = long.Parse(PlayerPrefs.GetString("LastRewarded:" + sid));
             TimeSpan tmp = new TimeSpan(lastRewardedTime);
             print("last rewarded time from playerpref : " + tmp);
@@ -156,7 +167,7 @@ public class RewardSystem : MonoBehaviour
             print("player didn't exist");
             DateTime initialTime = new DateTime(2010, 7, 17, 14, 30, 05);
             lastRewardedTime = initialTime.Ticks;
-            userProgress = 0;
+            userProgress = 1;
             SaveToDB();
         }
 
@@ -180,13 +191,27 @@ public class RewardSystem : MonoBehaviour
         int remainingResetHours = 0;
         int remainingMinutes = 0;
         int remainingSeconds = 0;
-       // print("rewarded time format : " + lastRewardedTime);
-        TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);       
-        print("last: " + lastRewarded);
-        print("now:" + timeOfNow);
-        double totalMin = timeOfNow.Minutes - lastRewarded.Minutes;
-        double totalHrs = timeOfNow.Hours - lastRewarded.Hours;
+        
+        TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);
+        print(" last get progress state : " + lastRewarded);
+        int totalMin = (int)timeOfNow.TotalMinutes - (int)lastRewarded.TotalMinutes;
+        //print(" timeOfNow : " + timeOfNow);
+        //print(" lasrewarded  : " + lastRewarded);
+        //print(" timeOfNow tth : " + timeOfNow.TotalHours);
+        //print(" lasrewarded tth : " + lastRewarded.TotalHours);
+        int totalHrs = (int)timeOfNow.TotalHours - (int)lastRewarded.TotalHours;
+        //print(" timeofnow days : " + timeOfNow.Days);
+        //print(" lastrewarded days : " + lastRewarded.Days);
         double totalDays = timeOfNow.Days - lastRewarded.Days;
+        
+        //just for test********
+        //TimeSpan tmp_1 = new TimeSpan(10,11, 00, 00);
+        //TimeSpan tmp_2 = new TimeSpan(12, 13, 00, 00);
+        //print(" timeofnow days : " + tmp_1.Days);
+        //print(" lastrewarded days : " + tmp_2.Days);
+        //double totalDays = tmp_2.Days - tmp_1.Days;
+        //***********************
+
 
         switch (timeKind)
         {
@@ -198,12 +223,11 @@ public class RewardSystem : MonoBehaviour
                 remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
                 RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 ResetTime = new TimeSpan(remainingResetHours, remainingMinutes, remainingSeconds);
-                print("now : " + timeOfNow);
-                print("day_remained reward time : " + remainedTime.TotalMinutes);
+                print("total days : " + totalDays);
+                print("day_remained reward time : " + remainedTime);
                 print("day_remained reset time : " + resetTime);
                 if (totalDays == 1)    //means player came to game regularly.
                 {
-
                     return ProgressStates.Progressable;
                 }
                 else if (totalDays > 1)  //means it's more than one they that player didn't come in game.
@@ -214,7 +238,6 @@ public class RewardSystem : MonoBehaviour
                 }
                 else   // means layer came to game again in one day.
                 {
-
                     return ProgressStates.NoProgress;
                 }
 
@@ -224,9 +247,10 @@ public class RewardSystem : MonoBehaviour
                 remainingSeconds = TimeConstants.basedSeconds - timeOfNow.Seconds;
                 RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 ResetTime = new TimeSpan(1, remainingMinutes, remainingSeconds);
-                print("now : " + timeOfNow);
-                print("hour_remained time" + RemainedTime);
-                print("hour_reset time" + ResetTime);
+                //print("now : " + timeOfNow);
+                //print("hour_remained time" + RemainedTime);
+                //print("hour_reset time" + ResetTime);
+                print("total hours : " + totalHrs);
                 if (totalHrs == 1)
                 {
 
@@ -253,8 +277,8 @@ public class RewardSystem : MonoBehaviour
                 RemainedTime = new TimeSpan(remainingRewardHours, remainingMinutes, remainingSeconds);
                 ResetTime = new TimeSpan(remainingRewardHours, 1, remainingSeconds);
                 print("now : " + timeOfNow);
-                print("minute_remained time" + RemainedTime);
-                print("day_remained reset time : " + resetTime);
+                print("minute_remained time : " + RemainedTime);
+                print("minute_remained reset time : " + resetTime);
                 if (totalMin == 1)
                 {
 
@@ -264,7 +288,7 @@ public class RewardSystem : MonoBehaviour
                 else if (totalMin > 1)
                 {
 
-                    print("totalmin>1 : progress must be reset now");
+                    //print("totalmin>1 : progress must be reset now");
                     return ProgressStates.ResetProgress;
 
                 }
@@ -292,8 +316,16 @@ public class RewardSystem : MonoBehaviour
         switch (state)
         {
             case ProgressStates.Progressable:
-                userProgress++;
-                GiveReward();
+                if (userProgress < userPrizes.Count)
+                {
+                    userProgress++;
+                    GiveReward();
+                }
+                else if (userProgress == userPrizes.Count)
+                {
+                    GiveReward();
+                }
+                
                 break;
             case ProgressStates.ResetProgress:
                 userProgress = 1;
@@ -310,12 +342,14 @@ public class RewardSystem : MonoBehaviour
 
     private void GiveReward()
     {
-        print("Get Prized...");
+        //print("Get Prized...");
+        print("user progress : " + userProgress);
         print(userPrizes[userProgress - 1].Coin + " coins were awarded to user with user id = " + user_id);
         print(userPrizes[userProgress - 1].Gem + " gems were awarded to user with user id = " + user_id);
-        print("user progress = " + userProgress);
+        //print("user progress = " + userProgress);
         lastRewardedTime = timeOfNow.Ticks; //time of now must be taken from servers not system.
-        print("lastRewardedTime updated : " + lastRewardedTime);
+        TimeSpan lastRewarded = new TimeSpan(lastRewardedTime);
+        print("lastRewardedTime updated : " + lastRewarded);
         if (GiveRewardAction != null)
         {
             GiveRewardAction(userProgress, RemainedTime, ResetTime);
@@ -327,7 +361,7 @@ public class RewardSystem : MonoBehaviour
         PlayerPrefs.SetInt("Progress:" + user_id, userProgress);
         PlayerPrefs.SetString("LastRewarded:" + user_id, lastRewardedTime.ToString());
     }
-    
+
     IEnumerator GetGoogleTime()
     {
         UnityWebRequest req;
@@ -341,10 +375,9 @@ public class RewardSystem : MonoBehaviour
             if (date.ContainsKey("Date"))
             {
                 result = date["Date"];
-                Debug.Log("Google Time Successfull");
+                //Debug.Log("Google Time Successfull");
             }
         }
-       
         yield return result;
     }
 
@@ -369,9 +402,9 @@ public class RewardSystem : MonoBehaviour
         yield return GetGoogleTime();
         if (result != string.Empty)
         {
-         
+
             DateTime time = Convert.ToDateTime(result);
-         
+
             timeOfNow = new TimeSpan(time.Ticks);
 
         }
@@ -391,8 +424,8 @@ public class RewardSystem : MonoBehaviour
             }
 
         }
-        if (resultAction!=null)
-                resultAction(timeOfNow);
+        if (resultAction != null)
+            resultAction(timeOfNow);
 
 
         //UnityWebRequest req;
@@ -437,8 +470,6 @@ public class RewardSystem : MonoBehaviour
         //    timeOfNow = new TimeSpan(time.Ticks);
         //    print("google time : " + timeOfNow.Hours);
         //}
-
-
 
         /*if (!req.isError)
         {
